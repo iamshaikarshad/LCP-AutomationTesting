@@ -266,6 +266,28 @@ button.secondary:hover:not(:disabled) { background: #f1f5f9; }
 }
 .download-btn:hover:not(:disabled) { background: #059669; }
 
+.doc-checkbox {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+.stitch-area {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+.stitch-area input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+}
+
 /* ── Misc ─────────────────────────────────────────────────────────────────── */
 
 .badge {

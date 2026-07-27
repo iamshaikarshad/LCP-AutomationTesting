@@ -41,6 +41,16 @@ def init_db() -> None:
             uploaded_by INTEGER NOT NULL REFERENCES users(id),
             uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS stitched_documents (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id          INTEGER NOT NULL REFERENCES projects(id),
+            filename            TEXT    NOT NULL,
+            content             BLOB    NOT NULL,
+            source_document_ids TEXT    NOT NULL,
+            created_by          INTEGER NOT NULL REFERENCES users(id),
+            created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     """)
     conn.commit()
     conn.close()

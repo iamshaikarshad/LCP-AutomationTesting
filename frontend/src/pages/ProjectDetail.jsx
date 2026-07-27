@@ -16,6 +16,12 @@ export default function ProjectDetail({ user, onLogout }) {
   const [uploadError, setUploadError] = useState('')
   const [memberError, setMemberError] = useState('')
 
+  const [stitched, setStitched] = useState([])
+  const [selectedDocIds, setSelectedDocIds] = useState(new Set())
+  const [stitchName, setStitchName] = useState('')
+  const [stitching, setStitching] = useState(false)
+  const [stitchError, setStitchError] = useState('')
+
   const projectId = parseInt(id, 10)
 
   useEffect(() => {
@@ -24,16 +30,18 @@ export default function ProjectDetail({ user, onLogout }) {
 
   const loadAll = async () => {
     try {
-      const [proj, mems, docs, users] = await Promise.all([
+      const [proj, mems, docs, users, stitchedDocs] = await Promise.all([
         api.getProject(projectId, user.id),
         api.getMembers(projectId),
         api.listDocuments(projectId),
         api.listUsers(),
+        api.listStitched(projectId),
       ])
       setProject(proj)
       setMembers(mems)
       setDocuments(docs)
       setAllUsers(users)
+      setStitched(stitchedDocs)
     } catch {
       navigate('/projects', { replace: true })
     }
@@ -66,6 +74,36 @@ export default function ProjectDetail({ user, onLogout }) {
     } finally {
       setUploading(false)
       fileInputRef.current.value = ''
+    }
+  }
+
+  const toggleDocSelection = (docId) => {
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(docId)) next.delete(docId)
+      else next.add(docId)
+      return next
+    })
+  }
+
+  const handleCombine = async () => {
+    setStitching(true)
+    setStitchError('')
+    try {
+      await api.stitchDocuments(
+        projectId,
+        user.id,
+        Array.from(selectedDocIds),
+        stitchName.trim() || undefined
+      )
+      setSelectedDocIds(new Set())
+      setStitchName('')
+      const stitchedDocs = await api.listStitched(projectId)
+      setStitched(stitchedDocs)
+    } catch (e) {
+      setStitchError(e.message)
+    } finally {
+      setStitching(false)
     }
   }
 
@@ -145,18 +183,75 @@ export default function ProjectDetail({ user, onLogout }) {
           {documents.length === 0 ? (
             <p className="empty">No documents yet. Upload a PDF above.</p>
           ) : (
+            <>
+              <ul className="doc-list">
+                {documents.map((doc) => (
+                  <li key={doc.id}>
+                    <input
+                      type="checkbox"
+                      className="doc-checkbox"
+                      checked={selectedDocIds.has(doc.id)}
+                      onChange={() => toggleDocSelection(doc.id)}
+                      aria-label={`Select ${doc.filename} to combine`}
+                    />
+                    <div className="doc-info">
+                      <span className="doc-name">{doc.filename}</span>
+                      <span className="doc-meta">
+                        {doc.uploaded_by_name} · {new Date(doc.uploaded_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <button
+                      className="download-btn"
+                      onClick={() => api.downloadDocument(doc.id)}
+                    >
+                      ↓ Download
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="stitch-area">
+                <input
+                  type="text"
+                  placeholder="Combined file name (optional)"
+                  value={stitchName}
+                  onChange={(e) => setStitchName(e.target.value)}
+                  disabled={stitching}
+                />
+                <button
+                  onClick={handleCombine}
+                  disabled={selectedDocIds.size < 2 || stitching}
+                >
+                  {stitching
+                    ? 'Combining…'
+                    : `⎘ Combine PDFs${selectedDocIds.size > 0 ? ` (${selectedDocIds.size})` : ''}`}
+                </button>
+                {selectedDocIds.size === 1 && (
+                  <p className="empty" style={{ padding: 0, marginTop: '0.4rem' }}>
+                    Select at least 2 documents to combine.
+                  </p>
+                )}
+                {stitchError && <p className="error">{stitchError}</p>}
+              </div>
+            </>
+          )}
+
+          <h2 style={{ marginTop: '1.75rem' }}>Combined PDFs</h2>
+          {stitched.length === 0 ? (
+            <p className="empty">No combined PDFs yet. Select 2+ documents above and combine them.</p>
+          ) : (
             <ul className="doc-list">
-              {documents.map((doc) => (
+              {stitched.map((doc) => (
                 <li key={doc.id}>
                   <div className="doc-info">
                     <span className="doc-name">{doc.filename}</span>
                     <span className="doc-meta">
-                      {doc.uploaded_by_name} · {new Date(doc.uploaded_at).toLocaleDateString()}
+                      {doc.created_by_name} · {new Date(doc.created_at).toLocaleDateString()}
                     </span>
                   </div>
                   <button
                     className="download-btn"
-                    onClick={() => api.downloadDocument(doc.id)}
+                    onClick={() => api.downloadStitched(doc.id)}
                   >
                     ↓ Download
                   </button>
@@ -167,6 +262,5 @@ export default function ProjectDetail({ user, onLogout }) {
         </section>
       </div>
     </div>
-    //Add a button to stitch documents
   )
 }

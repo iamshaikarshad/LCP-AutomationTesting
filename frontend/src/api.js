@@ -63,6 +63,21 @@ export const api = {
   downloadDocument: (docId) => {
     window.location.href = `${BASE}/documents/${docId}/download`
   },
-
+  
   // Add additional api endpoints here
+  // ── Stitched documents ─────────────────────────────────────────────────
+  stitchDocuments: (projectId, userId, documentIds, name) =>
+    request(`/projects/${projectId}/stitch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, document_ids: documentIds, name }),
+    }),
+
+  listStitched: (projectId) =>
+    request(`/projects/${projectId}/stitched`),
+
+  downloadStitched: (stitchId) => {
+    window.location.href = `${BASE}/stitched/${stitchId}/download`
+  },
+
 }
